@@ -13,7 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Untitled site',
+  title: 'Loopy Solitaire',
+  description: 'A sweet and playful Loopy-themed Klondike solitaire game.',
+  icons: {
+    icon: '/loopy/surprised.webp',
+    apple: '/loopy/surprised.webp',
+  },
 };
 
 export default function RootLayout({
