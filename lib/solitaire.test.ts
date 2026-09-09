@@ -6,6 +6,8 @@ import {
   createDeck,
   createGame,
   drawFromStock,
+  findAutoFoundationMove,
+  isReadyForAutoFinish,
   isValidTableauSequence,
   moveCards,
   restoreGame,
@@ -110,6 +112,42 @@ void test('recognizes a completed game', () => {
   }
   const won = moveCards(game, { type: 'tableau', pile: 0, index: 0 }, { type: 'foundation', suit: 'hearts' });
   assert.equal(won.status, 'won');
+});
+
+void test('automatically finishes a fully exposed endgame', () => {
+  let game = createGame(404);
+  const deck = createDeck().map((item) => ({ ...item, faceUp: true }));
+  game.stock = [];
+  game.waste = [];
+  game.tableau = [
+    deck.filter((item) => item.suit === 'hearts' && item.rank > 1).reverse(),
+    deck.filter((item) => item.suit === 'diamonds' && item.rank > 1).reverse(),
+    deck.filter((item) => item.suit === 'clubs' && item.rank > 1).reverse(),
+    deck.filter((item) => item.suit === 'spades' && item.rank > 1).reverse(),
+    [], [], [],
+  ];
+  for (const suit of ['hearts', 'diamonds', 'clubs', 'spades'] as const) {
+    game.foundations[suit] = [deck.find((item) => item.suit === suit && item.rank === 1)!];
+  }
+
+  assert.equal(isReadyForAutoFinish(game), true);
+  let animatedMoves = 0;
+  while (game.status !== 'won') {
+    const move = findAutoFoundationMove(game);
+    assert.ok(move);
+    game = moveCards(game, move.from, move.to);
+    animatedMoves += 1;
+  }
+  assert.equal(animatedMoves, 48);
+  assert.equal(game.tableau.flat().length, 0);
+});
+
+void test('does not auto-finish while cards are hidden or waiting in the stock', () => {
+  const game = createGame(405);
+  assert.equal(isReadyForAutoFinish(game), false);
+  game.stock = [];
+  game.waste = [];
+  assert.equal(isReadyForAutoFinish(game), false);
 });
 
 void test('round trips valid saved games and rejects malformed data', () => {

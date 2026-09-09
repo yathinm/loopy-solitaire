@@ -21,7 +21,9 @@ import {
   cardLabel,
   createGame,
   drawFromStock,
+  findAutoFoundationMove,
   findHint,
+  isReadyForAutoFinish,
   moveCards,
   rankLabel,
   restoreGame,
@@ -101,6 +103,7 @@ function CardView({ card, selected, hinted, className = '', onClick, onDoubleCli
       className={`playing-card card-face suit-${card.suit} ${selected ? 'is-selected' : ''} ${hinted ? 'is-hinted' : ''} ${className}`}
       aria-label={`${cardLabel(card)}, face up${selected ? ', selected' : ''}`}
       aria-pressed={selected}
+      data-card-id={card.id}
       draggable
       onClick={onClick}
       onDoubleClick={onDoubleClick}
@@ -143,6 +146,7 @@ export function SolitaireGame() {
   const [soundOn, setSoundOn] = useState(true);
   const [best, setBest] = useState<BestResult | null>(null);
   const [reaction, setReaction] = useState<Reaction>('neutral');
+  const [autoFinishing, setAutoFinishing] = useState(false);
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draggingCards = useRef<HTMLElement[]>([]);
 
@@ -203,10 +207,10 @@ export function SolitaireGame() {
   }, [hydrated, soundOn]);
 
   useEffect(() => {
-    if (!started || game.status === 'won') return;
+    if (!started || autoFinishing || game.status === 'won') return;
     const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [game.status, started]);
+  }, [autoFinishing, game.status, started]);
 
   useEffect(() => () => { if (reactionTimer.current) clearTimeout(reactionTimer.current); }, []);
 
@@ -243,6 +247,7 @@ export function SolitaireGame() {
     setHinted(null);
     setElapsed(0);
     setStarted(false);
+    setAutoFinishing(false);
     setReaction('neutral');
     setMessage('A fresh deal! Build down in alternating colors.');
   }, []);
@@ -374,6 +379,86 @@ export function SolitaireGame() {
     return () => lifecycle.abort();
   }, []);
 
+  useEffect(() => {
+    if (!hydrated || autoFinishing || !isReadyForAutoFinish(game)) return;
+    const timer = window.setTimeout(() => {
+      setSelected(null);
+      setHinted(null);
+      setMessage('Loopy is sorting the last cards…');
+      setReaction('happy');
+      setAutoFinishing(true);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [autoFinishing, game, hydrated]);
+
+  useEffect(() => {
+    if (!autoFinishing) return;
+    if (game.status === 'won') return;
+
+    const move = findAutoFoundationMove(game);
+    if (!move) {
+      const stopTimer = window.setTimeout(() => {
+        setAutoFinishing(false);
+        setMessage('Choose the next move and Loopy will keep sorting.');
+      }, 0);
+      return () => window.clearTimeout(stopTimer);
+    }
+
+    let finished = false;
+    let flight: HTMLElement | null = null;
+    let animationFrame = 0;
+    let fallbackTimer = 0;
+    const startTimer = window.setTimeout(() => {
+      const next = moveCards(game, move.from, move.to);
+      const source = document.querySelector<HTMLElement>(`[data-card-id="${move.card.id}"]`);
+      const target = document.querySelector<HTMLElement>(`[data-foundation-suit="${move.card.suit}"]`);
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const complete = () => {
+        if (finished) return;
+        finished = true;
+        source?.classList.remove('is-auto-moving');
+        flight?.remove();
+        apply(next, next.status === 'won' ? 'You win! Loopy sorted every card!' : 'Loopy is sorting the last cards…');
+      };
+
+      if (!source || !target || reduceMotion) {
+        fallbackTimer = window.setTimeout(complete, reduceMotion ? 35 : 0);
+        return;
+      }
+
+      const from = source.getBoundingClientRect();
+      const to = target.getBoundingClientRect();
+      flight = source.cloneNode(true) as HTMLElement;
+      flight.classList.add('auto-finish-flying-card');
+      flight.setAttribute('aria-hidden', 'true');
+      Object.assign(flight.style, {
+        left: `${from.left}px`,
+        top: `${from.top}px`,
+        width: `${from.width}px`,
+        height: `${from.height}px`,
+      });
+      source.classList.add('is-auto-moving');
+      document.body.appendChild(flight);
+      animationFrame = requestAnimationFrame(() => {
+        if (!flight) return;
+        flight.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) rotate(${move.card.suit === 'hearts' || move.card.suit === 'clubs' ? 2 : -2}deg) scale(.96)`;
+      });
+      flight.addEventListener('transitionend', complete, { once: true });
+      fallbackTimer = window.setTimeout(complete, 260);
+    }, 55);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearTimeout(fallbackTimer);
+      cancelAnimationFrame(animationFrame);
+      if (!finished) {
+        document.querySelector<HTMLElement>(`[data-card-id="${move.card.id}"]`)?.classList.remove('is-auto-moving');
+        flight?.remove();
+      }
+    };
+  }, [apply, autoFinishing, game]);
+
   const clearDragVisuals = () => {
     draggingCards.current.forEach((card) => card.classList.remove('is-dragging'));
     draggingCards.current = [];
@@ -441,11 +526,11 @@ export function SolitaireGame() {
             <span><small>Score</small><strong>{String(game.score).padStart(3, '0')}</strong></span>
           </div>
           <nav className="game-actions" aria-label="Game controls">
-            <button type="button" className="icon-action" onClick={undo} disabled={!history.length} aria-label="Undo last move"><Undo2 /></button>
-            <button type="button" className="icon-action" onClick={showHint} aria-label="Show a hint"><Lightbulb /></button>
+            <button type="button" className="icon-action" onClick={undo} disabled={autoFinishing || !history.length} aria-label="Undo last move"><Undo2 /></button>
+            <button type="button" className="icon-action" onClick={showHint} disabled={autoFinishing} aria-label="Show a hint"><Lightbulb /></button>
             <button type="button" className="icon-action" onClick={() => setSoundOn((value) => !value)} aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}>{soundOn ? <Music2 /> : <Music />}</button>
             <AlertDialog>
-              <AlertDialogTrigger render={<button type="button" className="new-game-button" aria-label="Start a new game" />}><Sparkles /> New game</AlertDialogTrigger>
+              <AlertDialogTrigger render={<button type="button" className="new-game-button" aria-label="Start a new game" disabled={autoFinishing} />}><Sparkles /> New game</AlertDialogTrigger>
               <AlertDialogContent className="loopy-confirm">
                 <AlertDialogHeader><AlertDialogTitle>Shuffle a fresh deal?</AlertDialogTitle><AlertDialogDescription>Your current game will be replaced with a brand-new one.</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter><AlertDialogCancel>Keep playing</AlertDialogCancel><AlertDialogAction onClick={() => newGame()}>New deal</AlertDialogAction></AlertDialogFooter>
@@ -454,7 +539,8 @@ export function SolitaireGame() {
           </nav>
         </header>
 
-        <section className="game-table" aria-label="Klondike solitaire table" aria-busy={!hydrated}>
+        <section className={`game-table ${autoFinishing ? 'is-auto-finishing' : ''}`} aria-label="Klondike solitaire table" aria-busy={!hydrated || autoFinishing}>
+          {autoFinishing ? <output className="auto-finish-banner" aria-live="polite"><Sparkles aria-hidden="true" /> Loopy is sorting the last {52 - foundationCount} cards!</output> : null}
           <div className="table-top-row">
             <div className="pile-group stock-group">
               <div className="pile-slot">
@@ -475,7 +561,7 @@ export function SolitaireGame() {
                 const card = pile.at(-1);
                 const source: CardSource = { type: 'foundation', suit };
                 return (
-                  <div className="pile-slot" key={suit} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropOn(event, { type: 'foundation', suit })}>
+                  <div className="pile-slot" data-foundation-suit={suit} key={suit} onDragOver={(event) => event.preventDefault()} onDrop={(event) => dropOn(event, { type: 'foundation', suit })}>
                     {card ? <CardView card={card} selected={selectedKey === sourceKey(source)} hinted={hintedKey === sourceKey(source)} onClick={() => selected ? tryMove(selected, { type: 'foundation', suit }) : setSelected(source)} onDragStart={(event) => dragSource(event, source)} /> : <EmptyPile label={`Empty ${suit} foundation`} symbol={suitSymbol(suit)} onClick={() => selected && tryMove(selected, { type: 'foundation', suit })} onDrop={(from) => tryMove(from, { type: 'foundation', suit })} />}
                     <span className="pile-label">{suit.slice(0, 1).toUpperCase()}</span>
                   </div>
@@ -508,7 +594,7 @@ export function SolitaireGame() {
 
       <Dialog open={game.status === 'won'}>
         <DialogContent className="win-dialog" showCloseButton={false}>
-          <DialogHeader><Image src="/loopy/student.png" alt="Celebrating Loopy" width={600} height={600} /><span className="win-kicker"><Trophy /> You did it!</span><DialogTitle>Loopy cleared the table</DialogTitle><DialogDescription>{formatTime(elapsed)} · {game.moves} moves · {game.score} points</DialogDescription></DialogHeader>
+          <DialogHeader><Image src="/loopy/student.png" alt="Celebrating Loopy" width={600} height={600} /><span className="win-kicker"><Trophy /> Game complete</span><DialogTitle>You win!</DialogTitle><DialogDescription>Loopy sorted every card home.<br />{formatTime(elapsed)} · {game.moves} moves · {game.score} points</DialogDescription></DialogHeader>
           <DialogFooter><button type="button" className="play-again-button" onClick={() => newGame()}><Play /> Play again</button></DialogFooter>
         </DialogContent>
       </Dialog>

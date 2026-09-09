@@ -32,6 +32,11 @@ export type CardTarget =
   | { type: 'foundation'; suit: Suit };
 
 export type Hint = { from: CardSource; to: CardTarget; message: string };
+export type FoundationMove = {
+  from: CardSource;
+  to: Extract<CardTarget, { type: 'foundation' }>;
+  card: Card;
+};
 
 const isRed = (suit: Suit) => suit === 'hearts' || suit === 'diamonds';
 
@@ -265,6 +270,31 @@ export function autoMoveToFoundation(state: GameState, source: CardSource): Game
   const cards = cardsFromSource(state, source);
   if (!cards || cards.length !== 1) return state;
   return moveCards(state, source, { type: 'foundation', suit: cards[0].suit });
+}
+
+export function findAutoFoundationMove(state: GameState): FoundationMove | null {
+  if (state.status === 'won') return null;
+  const sources: CardSource[] = [];
+  if (state.waste.length) sources.push({ type: 'waste' });
+  state.tableau.forEach((pile, pileIndex) => {
+    if (pile.length) sources.push({ type: 'tableau', pile: pileIndex, index: pile.length - 1 });
+  });
+
+  for (const from of sources) {
+    const cards = cardsFromSource(state, from);
+    if (!cards || cards.length !== 1) continue;
+    const card = cards[0];
+    if (canPlaceOnFoundation(card, state.foundations[card.suit], card.suit)) {
+      return { from, to: { type: 'foundation', suit: card.suit }, card };
+    }
+  }
+  return null;
+}
+
+export function isReadyForAutoFinish(state: GameState): boolean {
+  if (state.status === 'won' || state.stock.length || state.waste.length) return false;
+  const remaining = state.tableau.flat();
+  return remaining.length > 0 && remaining.every((card) => card.faceUp) && findAutoFoundationMove(state) !== null;
 }
 
 export function serializeGame(state: GameState): string {
