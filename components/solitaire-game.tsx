@@ -76,7 +76,7 @@ function formatTime(totalSeconds: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function CardView({ card, selected, hinted, className = '', onClick, onDoubleClick, onDragStart }: {
+function CardView({ card, selected, hinted, className = '', onClick, onDoubleClick, onDragStart, onDragEnd }: {
   card: Card;
   selected?: boolean;
   hinted?: boolean;
@@ -84,6 +84,7 @@ function CardView({ card, selected, hinted, className = '', onClick, onDoubleCli
   onClick?: () => void;
   onDoubleClick?: () => void;
   onDragStart?: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragEnd?: (event: React.DragEvent<HTMLButtonElement>) => void;
 }) {
   if (!card.faceUp) {
     return (
@@ -104,6 +105,7 @@ function CardView({ card, selected, hinted, className = '', onClick, onDoubleCli
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
     >
       <span className={`card-corner top ${red ? 'red' : 'dark'}`} aria-hidden="true"><strong>{rankLabel(card.rank)}</strong><span>{suitSymbol(card.suit)}</span></span>
       <span className="card-art" aria-hidden="true"><span className="card-art-halo" /><Image src={loopy.src} alt="" fill sizes="100px" draggable={false} /></span>
@@ -142,6 +144,7 @@ export function SolitaireGame() {
   const [best, setBest] = useState<BestResult | null>(null);
   const [reaction, setReaction] = useState<Reaction>('neutral');
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draggingCards = useRef<HTMLElement[]>([]);
 
   const react = useCallback((next: Reaction) => {
     setReaction(next);
@@ -371,9 +374,48 @@ export function SolitaireGame() {
     return () => lifecycle.abort();
   }, []);
 
+  const clearDragVisuals = () => {
+    draggingCards.current.forEach((card) => card.classList.remove('is-dragging'));
+    draggingCards.current = [];
+  };
+
   const dragSource = (event: React.DragEvent<HTMLButtonElement>, source: CardSource) => {
+    clearDragVisuals();
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('application/x-loopy-card', JSON.stringify(source));
+
+    if (source.type !== 'tableau') return;
+    const sourceCard = event.currentTarget.closest<HTMLElement>('.tableau-card');
+    const pile = sourceCard?.parentElement;
+    if (!sourceCard || !pile) return;
+
+    const cards = Array.from(pile.querySelectorAll<HTMLElement>(':scope > .tableau-card')).slice(source.index);
+    if (cards.length < 2) return;
+
+    const preview = document.createElement('div');
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const lastCard = cards.at(-1)!;
+    preview.className = 'drag-stack-preview';
+    preview.setAttribute('aria-hidden', 'true');
+    preview.style.width = `${sourceRect.width}px`;
+    preview.style.height = `${lastCard.offsetTop - sourceCard.offsetTop + lastCard.offsetHeight}px`;
+
+    cards.forEach((card) => {
+      const clone = card.cloneNode(true) as HTMLElement;
+      clone.classList.remove('is-dragging');
+      clone.style.top = `${card.offsetTop - sourceCard.offsetTop}px`;
+      clone.style.left = '0';
+      clone.style.opacity = '1';
+      preview.appendChild(clone);
+      card.classList.add('is-dragging');
+    });
+
+    document.body.appendChild(preview);
+    draggingCards.current = cards;
+    const pointerX = Math.max(0, Math.min(sourceRect.width, event.clientX - sourceRect.left));
+    const pointerY = Math.max(0, Math.min(sourceRect.height, event.clientY - sourceRect.top));
+    event.dataTransfer.setDragImage(preview, pointerX, pointerY);
+    requestAnimationFrame(() => preview.remove());
   };
 
   const dropOn = (event: React.DragEvent, target: CardTarget) => {
@@ -450,7 +492,7 @@ export function SolitaireGame() {
                   const source: CardSource = { type: 'tableau', pile: pileIndex, index };
                   const key = sourceKey(source);
                   return <div className={`tableau-card ${card.faceUp ? 'face-up' : 'face-down'}`} style={{ '--card-index': index, '--face-index': pile.slice(0, index).filter((item) => item.faceUp).length } as React.CSSProperties} key={card.id}>
-                    <CardView card={card} selected={selectedKey === key} hinted={hintedKey === key} onClick={() => selectOrMoveToTableau(pileIndex, index)} onDoubleClick={() => card.faceUp && sendHome(source)} onDragStart={card.faceUp ? (event) => dragSource(event, source) : undefined} />
+                    <CardView card={card} selected={selectedKey === key} hinted={hintedKey === key} onClick={() => selectOrMoveToTableau(pileIndex, index)} onDoubleClick={() => card.faceUp && sendHome(source)} onDragStart={card.faceUp ? (event) => dragSource(event, source) : undefined} onDragEnd={clearDragVisuals} />
                   </div>;
                 })}
               </div>

@@ -124,6 +124,10 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 .tableau { display: grid; grid-template-columns: repeat(7, minmax(0, var(--card-width))); justify-content: space-between; gap: clamp(.25rem, 1vw, .8rem); padding-top: 1.15rem; }
 .tableau-pile { position: relative; width: var(--card-width); min-height: calc(var(--card-width) * var(--card-ratio)); height: min(calc(var(--card-width) * var(--card-ratio) + (var(--pile-length) - 1) * clamp(1.42rem, 3vw, 2rem)), 32rem); }
 .tableau-card { position: absolute; z-index: calc(var(--card-index) + 1); top: calc(var(--card-index) * clamp(.68rem, 1.35vw, 1rem) + var(--face-index) * clamp(.78rem, 1.55vw, 1.12rem)); left: 0; width: var(--card-width); aspect-ratio: 1 / var(--card-ratio); }
+.tableau-card.is-dragging { opacity: .28; }
+.drag-stack-preview { position: fixed; z-index: -1; top: -10000px; left: -10000px; pointer-events: none; }
+.drag-stack-preview .tableau-card { transition: none; }
+.drag-stack-preview .playing-card { cursor: grabbing; transform: none; box-shadow: 0 7px 14px rgba(87,45,62,.26); }
 
 .game-footer { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: .75rem .45rem 0; color: #724859; font-size: .78rem; font-weight: 650; }
 .game-footer p { margin: 0; }
