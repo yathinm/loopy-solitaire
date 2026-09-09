@@ -87,11 +87,11 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 .game-table.is-auto-finishing .playing-card, .game-table.is-auto-finishing .empty-pile, .game-table.is-auto-finishing .loopy-reaction { pointer-events: none; }
 .auto-finish-banner { position: absolute; z-index: 70; bottom: .8rem; left: 50%; display: flex; align-items: center; gap: .4rem; transform: translateX(-50%); padding: .55rem .9rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: var(--pink-dark); box-shadow: 0 5px 16px rgba(87,45,62,.24); font-size: .875rem; font-weight: 850; white-space: nowrap; animation: finish-banner-in .3s ease-out both; }
 .auto-finish-banner svg { width: 1rem; }
-.table-top-row { display: grid; grid-template-columns: 2fr 1fr 4fr; align-items: start; gap: clamp(.35rem, 1vw, .8rem); padding-bottom: .85rem; border-bottom: 1px dashed #dca9b8; }
+.table-top-row { display: grid; grid-template-columns: 2fr 1fr 4fr; align-items: start; gap: clamp(.35rem, 1vw, .8rem); padding-bottom: 1.65rem; border-bottom: 1px dashed #dca9b8; }
 .pile-group { display: grid; grid-template-columns: repeat(2, var(--card-width)); gap: clamp(.3rem, 1vw, .75rem); }
 .foundations { grid-template-columns: repeat(4, var(--card-width)); justify-content: end; }
 .pile-slot { position: relative; width: var(--card-width); aspect-ratio: 1 / var(--card-ratio); }
-.pile-label { position: absolute; z-index: 4; left: 50%; bottom: -.9rem; transform: translateX(-50%); color: #9f7785; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+.pile-label { position: absolute; z-index: 4; left: 50%; bottom: -1.25rem; transform: translateX(-50%); color: #9f7785; font-size: .75rem; line-height: 1; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
 
 .playing-card, .empty-pile { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: clamp(.48rem, .9vw, .78rem); }
 .playing-card { z-index: 1; padding: 0; overflow: hidden; cursor: pointer; border: 1px solid #dcaebb; background: #fffdf7; box-shadow: 0 4px 9px rgba(87,45,62,.19), 0 1px 0 rgba(255,255,255,.8) inset; transition: transform .12s, filter .12s, box-shadow .12s; }
