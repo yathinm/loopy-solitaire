@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { HelpCircle, Lightbulb, Music, Music2, Play, Sparkles, Trophy, Undo2 } from 'lucide-react';
+import { HelpCircle, Lightbulb, Play, Sparkles, Trophy, Undo2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,7 +36,6 @@ import {
 } from '@/lib/solitaire';
 
 const STORAGE_KEY = 'loopy-solitaire:game';
-const PREFS_KEY = 'loopy-solitaire:preferences';
 const BEST_KEY = 'loopy-solitaire:best';
 
 const LOOPY_BY_RANK: Record<Card['rank'], { src: string; name: string }> = {
@@ -143,7 +142,6 @@ export function SolitaireGame() {
   const [elapsed, setElapsed] = useState(0);
   const [started, setStarted] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [soundOn, setSoundOn] = useState(true);
   const [best, setBest] = useState<BestResult | null>(null);
   const [reaction, setReaction] = useState<Reaction>('neutral');
   const [autoFinishing, setAutoFinishing] = useState(false);
@@ -156,27 +154,6 @@ export function SolitaireGame() {
     if (next !== 'neutral') reactionTimer.current = setTimeout(() => setReaction('neutral'), 1200);
   }, []);
 
-  const playSound = useCallback((kind: 'move' | 'invalid' | 'win') => {
-    if (!soundOn || typeof window === 'undefined') return;
-    try {
-      const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const context = new AudioContextClass();
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = kind === 'invalid' ? 180 : kind === 'win' ? 660 : 420;
-      gain.gain.setValueAtTime(0.055, context.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + (kind === 'win' ? 0.35 : 0.12));
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start();
-      oscillator.stop(context.currentTime + (kind === 'win' ? 0.35 : 0.12));
-      oscillator.addEventListener('ended', () => void context.close());
-    } catch {
-      // Audio is optional and must never block play.
-    }
-  }, [soundOn]);
-
   useEffect(() => {
     queueMicrotask(() => {
       try {
@@ -187,8 +164,7 @@ export function SolitaireGame() {
           setElapsed(saved?.elapsed ?? 0);
           setStarted(saved?.started ?? false);
         } else setGame(createGame(Date.now()));
-        const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as { soundOn?: boolean };
-        setSoundOn(prefs.soundOn ?? true);
+        localStorage.removeItem('loopy-solitaire:preferences');
         setBest(JSON.parse(localStorage.getItem(BEST_KEY) ?? 'null') as BestResult | null);
       } catch {
         setGame(createGame(Date.now()));
@@ -203,10 +179,6 @@ export function SolitaireGame() {
   }, [elapsed, game, hydrated, started]);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(PREFS_KEY, JSON.stringify({ soundOn }));
-  }, [hydrated, soundOn]);
-
-  useEffect(() => {
     if (!started || autoFinishing || game.status === 'won') return;
     const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
     return () => window.clearInterval(timer);
@@ -218,7 +190,6 @@ export function SolitaireGame() {
     if (next === game) {
       setMessage('That card cannot go there yet.');
       react('surprised');
-      playSound('invalid');
       return false;
     }
     setHistory((items) => [...items.slice(-49), game]);
@@ -228,7 +199,6 @@ export function SolitaireGame() {
     setStarted(true);
     setMessage(successMessage ?? 'Nice move!');
     react('happy');
-    playSound(next.status === 'won' ? 'win' : 'move');
     if (next.status === 'won') {
       const result = { seconds: elapsed, moves: next.moves, score: next.score };
       if (!best || elapsed < best.seconds || (elapsed === best.seconds && next.score > best.score)) {
@@ -238,7 +208,7 @@ export function SolitaireGame() {
       localStorage.removeItem(STORAGE_KEY);
     }
     return true;
-  }, [best, elapsed, game, playSound, react]);
+  }, [best, elapsed, game, react]);
 
   const newGame = useCallback((seed = Date.now()) => {
     setGame(createGame(seed));
@@ -528,7 +498,6 @@ export function SolitaireGame() {
           <nav className="game-actions" aria-label="Game controls">
             <button type="button" className="icon-action" onClick={undo} disabled={autoFinishing || !history.length} aria-label="Undo last move"><Undo2 /></button>
             <button type="button" className="icon-action" onClick={showHint} disabled={autoFinishing} aria-label="Show a hint"><Lightbulb /></button>
-            <button type="button" className="icon-action" onClick={() => setSoundOn((value) => !value)} aria-label={soundOn ? 'Turn sound off' : 'Turn sound on'}>{soundOn ? <Music2 /> : <Music />}</button>
             <AlertDialog>
               <AlertDialogTrigger render={<button type="button" className="new-game-button" aria-label="Start a new game" disabled={autoFinishing} />}><Sparkles /> New game</AlertDialogTrigger>
               <AlertDialogContent className="loopy-confirm">
