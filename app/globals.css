@@ -85,7 +85,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 
 .game-table { position: relative; min-height: clamp(31rem, 69svh, 47rem); padding: clamp(.7rem, 1.8vw, 1.2rem); border: 4px solid rgba(255,255,255,.82); border-radius: 2rem; background: linear-gradient(145deg, rgba(255,249,233,.95), rgba(255,244,221,.88)); box-shadow: 0 1.25rem 3rem rgba(81,39,56,.18), inset 0 0 0 2px #efbdca; backdrop-filter: blur(9px); }
 .game-table.is-auto-finishing .playing-card, .game-table.is-auto-finishing .empty-pile, .game-table.is-auto-finishing .loopy-reaction { pointer-events: none; }
-.auto-finish-banner { position: absolute; z-index: 70; top: .8rem; left: 50%; display: flex; align-items: center; gap: .4rem; transform: translateX(-50%); padding: .55rem .9rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: var(--pink-dark); box-shadow: 0 5px 16px rgba(87,45,62,.24); font-size: .875rem; font-weight: 850; white-space: nowrap; animation: finish-banner-in .3s ease-out both; }
+.auto-finish-banner { position: absolute; z-index: 70; bottom: .8rem; left: 50%; display: flex; align-items: center; gap: .4rem; transform: translateX(-50%); padding: .55rem .9rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: var(--pink-dark); box-shadow: 0 5px 16px rgba(87,45,62,.24); font-size: .875rem; font-weight: 850; white-space: nowrap; animation: finish-banner-in .3s ease-out both; }
 .auto-finish-banner svg { width: 1rem; }
 .table-top-row { display: grid; grid-template-columns: 2fr 1fr 4fr; align-items: start; gap: clamp(.35rem, 1vw, .8rem); padding-bottom: .85rem; border-bottom: 1px dashed #dca9b8; }
 .pile-group { display: grid; grid-template-columns: repeat(2, var(--card-width)); gap: clamp(.3rem, 1vw, .75rem); }
@@ -189,7 +189,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
   .game-footer { align-items: flex-start; padding-inline: .2rem; font-size: .75rem; }
   .game-footer output { max-width: 68%; }
   .pile-label { display: none; }
-  .auto-finish-banner { top: .45rem; max-width: calc(100% - 1rem); padding: .45rem .65rem; font-size: .75rem; }
+  .auto-finish-banner { bottom: .45rem; max-width: calc(100% - 1rem); padding: .45rem .65rem; font-size: .75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
