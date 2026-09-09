@@ -70,7 +70,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 .status-bar { justify-self: center; display: flex; gap: .45rem; padding: .4rem; border: 2px solid rgba(255,255,255,.75); border-radius: 1.1rem; background: rgba(255,249,233,.88); box-shadow: 0 8px 22px rgba(87,45,62,.1), inset 0 0 0 1px #efc5d0; backdrop-filter: blur(8px); }
 .status-bar span { min-width: 4.7rem; text-align: center; padding: .22rem .62rem; border-right: 1px solid #edccd5; }
 .status-bar span:last-child { border: 0; }
-.status-bar small { display: block; color: #986c7b; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+.status-bar small { display: block; color: #986c7b; font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .status-bar strong { display: block; margin-top: .05rem; color: var(--berry); font-family: var(--font-geist-mono), monospace; font-size: 1rem; letter-spacing: .04em; }
 
 .game-actions { justify-self: end; display: flex; align-items: center; gap: .45rem; }
@@ -78,7 +78,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 .icon-action { display: grid; width: 2.65rem; place-items: center; border-radius: .9rem; }
 .icon-action svg { width: 1.15rem; }
 .icon-action:disabled { opacity: .42; cursor: default; }
-.new-game-button { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .85rem; border-radius: .9rem; color: white; background: var(--pink-dark); font-size: .82rem; font-weight: 800; }
+.new-game-button { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem .85rem; border-radius: .9rem; color: white; background: var(--pink-dark); font-size: .875rem; font-weight: 800; }
 .new-game-button svg { width: 1rem; }
 .icon-action:not(:disabled):hover, .new-game-button:hover { transform: translateY(-2px); }
 .icon-action:not(:disabled):active, .new-game-button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(137,60,84,.16); }
@@ -88,7 +88,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
 .pile-group { display: grid; grid-template-columns: repeat(2, var(--card-width)); gap: clamp(.3rem, 1vw, .75rem); }
 .foundations { grid-template-columns: repeat(4, var(--card-width)); justify-content: end; }
 .pile-slot { position: relative; width: var(--card-width); aspect-ratio: 1 / var(--card-ratio); }
-.pile-label { position: absolute; z-index: 4; left: 50%; bottom: -.76rem; transform: translateX(-50%); color: #9f7785; font-size: .56rem; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; }
+.pile-label { position: absolute; z-index: 4; left: 50%; bottom: -.9rem; transform: translateX(-50%); color: #9f7785; font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
 
 .playing-card, .empty-pile { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: clamp(.48rem, .9vw, .78rem); }
 .playing-card { z-index: 1; padding: 0; overflow: hidden; cursor: pointer; border: 1px solid #dcaebb; background: #fffdf7; box-shadow: 0 4px 9px rgba(87,45,62,.19), 0 1px 0 rgba(255,255,255,.8) inset; transition: transform .12s, filter .12s, box-shadow .12s; }
@@ -163,7 +163,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
   .brand-block h1 { font-size: clamp(1.75rem, 9vw, 2.45rem); }
   .game-actions { gap: .28rem; }
   .icon-action { width: 2.35rem; min-height: 2.35rem; border-radius: .75rem; }
-  .new-game-button { min-height: 2.35rem; padding: .4rem .62rem; font-size: .72rem; }
+  .new-game-button { min-height: 2.35rem; padding: .4rem .62rem; font-size: .8rem; }
   .new-game-button svg { display: none; }
   .status-bar { padding: .28rem; border-radius: .9rem; }
   .status-bar span { min-width: 0; padding-inline: .35rem; }
@@ -176,7 +176,7 @@ button:focus-visible { outline: 3px solid #285b72; outline-offset: 3px; }
   .tableau-card { top: calc(var(--card-index) * .72rem + var(--face-index) * 1.02rem); }
   .card-back-pattern { inset: 18% 20%; }
   .card-art { inset: 22% 7% 8%; }
-  .game-footer { align-items: flex-start; padding-inline: .2rem; font-size: .68rem; }
+  .game-footer { align-items: flex-start; padding-inline: .2rem; font-size: .75rem; }
   .game-footer output { max-width: 68%; }
   .pile-label { display: none; }
 }

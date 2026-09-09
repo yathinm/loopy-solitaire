@@ -64,6 +64,12 @@ const sourceKey = (source: CardSource | null) => {
   return 'waste';
 };
 
+function assertEmptyToolInput(input: unknown) {
+  if (typeof input !== 'object' || input === null || Array.isArray(input) || Object.keys(input).length > 0) {
+    throw new Error('This action does not accept any input fields.');
+  }
+}
+
 function formatTime(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
@@ -268,7 +274,7 @@ export function SolitaireGame() {
     apply(next, next === game ? undefined : 'Loopy sent that card home!');
   };
 
-  const showHint = () => {
+  const showHint = useCallback(() => {
     const hint = findHint(game);
     if (!hint) {
       setMessage('No safe move found. Try undoing or starting a new deal.');
@@ -280,9 +286,9 @@ export function SolitaireGame() {
     setGame((current) => ({ ...current, score: Math.max(0, current.score - 2) }));
     setMessage(hint.message);
     react('thinking');
-  };
+  }, [game, react]);
 
-  const undo = () => {
+  const undo = useCallback(() => {
     const previous = history.at(-1);
     if (!previous) return;
     setGame(previous);
@@ -291,7 +297,79 @@ export function SolitaireGame() {
     setHinted(null);
     setMessage('Move undone.');
     setStarted(previous.moves > 0);
-  };
+  }, [history]);
+
+  const toolStateRef = useRef({ game, historyLength: history.length, newGame, showHint, undo });
+  useEffect(() => {
+    toolStateRef.current = { game, historyLength: history.length, newGame, showHint, undo };
+  }, [game, history.length, newGame, showHint, undo]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, [contenteditable="true"]')) return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undo();
+      } else if (event.key.toLowerCase() === 'h' && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault();
+        showHint();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showHint, undo]);
+
+  useEffect(() => {
+    const context = document.modelContext;
+    if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    const register = async () => {
+      await context.registerTool({
+        name: 'start_new_solitaire_game',
+        title: 'Start a new Loopy Solitaire game',
+        description: 'Replace the current deal with a freshly shuffled Loopy Solitaire game.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: (input) => {
+          assertEmptyToolInput(input);
+          toolStateRef.current.newGame();
+          return { status: 'playing', cards: 52 };
+        },
+      }, { signal: lifecycle.signal });
+      await context.registerTool({
+        name: 'request_solitaire_hint',
+        title: 'Request a solitaire hint',
+        description: 'Highlight and describe a useful next move in the current game.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: (input) => {
+          assertEmptyToolInput(input);
+          const hint = findHint(toolStateRef.current.game);
+          toolStateRef.current.showHint();
+          return { available: Boolean(hint), message: hint?.message ?? 'No safe move found.' };
+        },
+      }, { signal: lifecycle.signal });
+      await context.registerTool({
+        name: 'undo_solitaire_move',
+        title: 'Undo the last solitaire move',
+        description: 'Restore the game to its state before the most recent move.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: false, untrustedContentHint: false },
+        execute: (input) => {
+          assertEmptyToolInput(input);
+          const available = toolStateRef.current.historyLength > 0;
+          toolStateRef.current.undo();
+          return { undone: available };
+        },
+      }, { signal: lifecycle.signal });
+    };
+    void register().catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      console.error('Unable to register Loopy Solitaire tools.', error);
+    });
+    return () => lifecycle.abort();
+  }, []);
 
   const dragSource = (event: React.DragEvent<HTMLButtonElement>, source: CardSource) => {
     event.dataTransfer.effectAllowed = 'move';

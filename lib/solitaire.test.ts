@@ -73,6 +73,45 @@ void test('moves an exposed ace to its foundation and reveals covered cards', ()
   assert.equal(moved.score, 15);
 });
 
+void test('moves a valid tableau sequence and leaves invalid moves unchanged', () => {
+  const game = createGame(77);
+  game.tableau = [
+    [card('king-black', 13, 'clubs')],
+    [card('queen-red', 12, 'hearts'), card('jack-black', 11, 'spades')],
+    [card('queen-same-color', 12, 'diamonds')],
+    [], [], [], [],
+  ];
+  game.stock = createDeck().slice(0, 48);
+  const moved = moveCards(game, { type: 'tableau', pile: 1, index: 0 }, { type: 'tableau', pile: 0 });
+  assert.deepEqual(moved.tableau[0].map((item) => item.id), ['king-black', 'queen-red', 'jack-black']);
+  assert.equal(moved.tableau[1].length, 0);
+  const invalid = moveCards(game, { type: 'tableau', pile: 2, index: 0 }, { type: 'tableau', pile: 1 });
+  assert.equal(invalid, game);
+});
+
+void test('allows a foundation card back onto the tableau with a score penalty', () => {
+  const game = createGame(88);
+  game.foundations.hearts = [card('ace-hearts', 1, 'hearts')];
+  game.tableau[0] = [card('two-clubs', 2, 'clubs')];
+  game.score = 20;
+  const moved = moveCards(game, { type: 'foundation', suit: 'hearts' }, { type: 'tableau', pile: 0 });
+  assert.equal(moved.tableau[0].at(-1)?.id, 'ace-hearts');
+  assert.equal(moved.score, 10);
+});
+
+void test('recognizes a completed game', () => {
+  const game = createGame(101);
+  const deck = createDeck().map((item) => ({ ...item, faceUp: true }));
+  game.stock = [];
+  game.waste = [];
+  game.tableau = [[deck.find((item) => item.id === 'hearts-13')!], [], [], [], [], [], []];
+  for (const suit of ['hearts', 'diamonds', 'clubs', 'spades'] as const) {
+    game.foundations[suit] = deck.filter((item) => item.suit === suit && !(suit === 'hearts' && item.rank === 13));
+  }
+  const won = moveCards(game, { type: 'tableau', pile: 0, index: 0 }, { type: 'foundation', suit: 'hearts' });
+  assert.equal(won.status, 'won');
+});
+
 void test('round trips valid saved games and rejects malformed data', () => {
   const game = createGame(2026);
   assert.deepEqual(restoreGame(serializeGame(game)), game);
